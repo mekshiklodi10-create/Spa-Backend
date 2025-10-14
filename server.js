@@ -9,6 +9,7 @@ import contactRoutes from "./routes/contactRoutes.js";
 import services from "./routes/services.js";
 import packages from "./routes/packages.js";
 import reservations from "./routes/reservations.js";
+import user from "./routes/user.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use("/api", contactRoutes);
 app.use("/api", services);
 app.use("/api", packages);
 app.use("/api/reservations", reservations);
+app.use("/api/users", user);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

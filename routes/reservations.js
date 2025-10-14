@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 
 const router = express.Router();
 
-// ✅ Krijo rezervim
+
 router.post("/", async (req, res) => {
   const { name, email, date, time, serviceId, packageId } = req.body;
 
@@ -29,7 +29,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Merr të gjitha rezervimet (për admin ose dashboard)
 router.get("/", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -49,7 +48,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Merr rezervimet e një përdoruesi sipas email-it
 router.get("/user/:email", async (req, res) => {
   const { email } = req.params;
   try {
@@ -72,7 +70,7 @@ router.get("/user/:email", async (req, res) => {
   }
 });
 
-// ✅ Anulo rezervim (ndrysho status në 'canceled')
+
 router.put("/cancel/:id", async (req, res) => {
   const { id } = req.params;
 

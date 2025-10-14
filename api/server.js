@@ -6,12 +6,12 @@ import fs from "fs";
 import path from "path";
 import serverless from "serverless-http";
 
-import authRoutes from "../routes/authRoutes.js";
-import contactRoutes from "../routes/contactRoutes.js";
-import services from "../routes/services.js";
-import packages from "../routes/packages.js";
-import reservations from "../routes/reservations.js";
-import user from "../routes/user.js";
+import authRoutes from "./routes/authRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
+import services from "./routes/services.js";
+import packages from "./routes/packages.js";
+import reservations from "./routes/reservations.js";
+import user from "./routes/user.js";
 
 dotenv.config();
 

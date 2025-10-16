@@ -1,9 +1,10 @@
 import express from "express";
 import cors from "cors";
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import serverless from "serverless-http"; // Importo serverless-http
 
 import authRoutes from "./routes/authRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
@@ -33,8 +34,9 @@ app.use("/api", packages);
 app.use("/api/reservations", reservations);
 app.use("/api/users", user);
 
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => {
+//   console.log(`✅ Serveri po punon në http://localhost:${PORT}`);
+// });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Serveri po punon në http://localhost:${PORT}`);
-});
+export const handler = serverless(app); 

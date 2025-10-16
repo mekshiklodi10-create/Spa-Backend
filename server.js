@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import nodemailer from 'nodemailer';
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";

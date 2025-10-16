@@ -39,4 +39,4 @@ app.use("/api/users", user);
 //   console.log(`✅ Serveri po punon në http://localhost:${PORT}`);
 // });
 
-export const handler = serverless(app); 
+export default serverless(app);

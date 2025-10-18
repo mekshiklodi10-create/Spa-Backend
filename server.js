@@ -24,7 +24,17 @@ if (!fs.existsSync(uploadsDir)) {
 
 app.use("/uploads", express.static("uploads"));
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://spa-managment-orpin.vercel.app", // frontend-i yt nga Vercel
+      "http://localhost:3000" // për testime lokale
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);

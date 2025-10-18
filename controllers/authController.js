@@ -6,7 +6,7 @@ export const register = async (req, res) => {
   try {
     console.log("Req.body:", req.body);
 
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
     
     const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [
@@ -23,8 +23,8 @@ export const register = async (req, res) => {
 
     
     await db.query(
-      "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-      [name, email, hashedPassword, role || "user"]
+      "INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)",
+      [name, email, hashedPassword, role || "user", phone || ""]
     );
 
     res.status(201).json({ message: "Regjistrimi u krye me sukses" });

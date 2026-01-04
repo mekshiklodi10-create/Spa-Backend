@@ -1,10 +1,37 @@
-import express from "express";
-import { verifyAdmin } from "../middleware/auth.js";
+import supabase from "../config/db.js";
 
-const router = express.Router();
+export const verifyAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
 
-router.get("/dashboard", verifyAdmin, (req, res) => {
-  res.json({ message: "Mirë se vini në dashboard, admin!" });
-});
+    if (!authHeader) {
+      return res.status(401).json({ message: "Token mungon" });
+    }
 
-export default router;
+    const token = authHeader.replace("Bearer ", "");
+
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      return res.status(401).json({ message: "Token i pavlefshëm" });
+    }
+
+    const userId = data.user.id;
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", userId)
+      .single();
+
+    if (userError || userData?.role !== "admin") {
+      return res.status(403).json({ message: "Nuk keni akses admin" });
+    }
+
+    req.user = data.user;
+    next();
+  } catch (err) {
+    console.error("verifyAdmin error:", err);
+    res.status(500).json({ message: "Gabim serveri" });
+  }
+};

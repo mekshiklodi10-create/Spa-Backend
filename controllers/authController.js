@@ -1,88 +1,54 @@
-import db from "../config/db.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import supabase from "../config/db.js";
 
+// REGISTER
 export const register = async (req, res) => {
   try {
-    console.log("Req.body:", req.body);
-
     const { name, email, password, role, phone, address, photoUrl } = req.body;
 
-    
-    const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [
+    if (!email || !password || !name)
+      return res.status(400).json({ message: "Të dhënat janë të detyrueshme" });
+
+    // Krijo user me Supabase Admin
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
-    ]);
-    if (existing.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "Ky email është i regjistruar më parë" });
-    }
+      password,
+      user_metadata: { name, role, phone, address, photoUrl },
+    });
 
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (error) throw error;
 
-    
-    await db.query(
-  "INSERT INTO users (name, email, password, role, phone, address, photoUrl) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  [
-    name,
-    email,
-    hashedPassword,
-    role,
-    phone || '',
-    address || '',    
-    photoUrl || ''    
-  ]
-);
-
-    res.status(201).json({ message: "Regjistrimi u krye me sukses" });
+    res.status(201).json({ message: "Regjistrimi u krye me sukses", userId: data.id });
   } catch (err) {
     console.error("Gabim ne server (register):", err);
     res.status(500).json({ message: "Gabim ne server", error: err.message });
   }
 };
 
-
+// LOGIN
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    
-    const [users] = await db.query("SELECT * FROM users WHERE email = ?", [
+    if (!email || !password)
+      return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
-    ]);
-    if (users.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Email ose fjalëkalim i gabuar" });
-    }
+      password,
+    });
 
-    const user = users[0];
+    if (error) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
 
-    
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res
-        .status(400)
-        .json({ message: "Email ose fjalëkalim i gabuar" });
-    }
+    // Merr user metadata
+    const user = data.user;
 
-    
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    
     res.json({
       message: "Login i suksesshëm",
-      token,
+      token: data.session?.access_token,
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
-        role: user.role,
+        ...user.user_metadata,
       },
     });
   } catch (err) {

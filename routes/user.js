@@ -1,48 +1,64 @@
 import express from "express";
-import pool from "../config/db.js";
+import supabase from "../config/db.js";
 
 const router = express.Router();
 
+/* ================= GET ALL ================= */
 router.get("/", async (req, res) => {
   try {
-    const [users] = await pool.query("SELECT id, name, email, phone, address, role FROM users");
-    res.json(users);
-  } catch (err) {
-    console.error("Gabim gjatë marrjes së përdoruesve:", err);
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email, phone, address, role");
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error) {
+    console.error("Gabim gjatë marrjes së përdoruesve:", error);
     res.status(500).json({ message: "Gabim gjatë marrjes së përdoruesve" });
   }
 });
 
+/* ================= GET BY EMAIL ================= */
 router.get("/:email", async (req, res) => {
-  const email = decodeURIComponent(req.params.email); 
+  const email = decodeURIComponent(req.params.email);
+
   try {
-    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
-    if (rows.length === 0) return res.status(404).json({ message: "Përdoruesi nuk u gjet" });
-    res.json(rows[0]);
-  } catch (err) {
-    console.error("Gabim gjatë marrjes së përdoruesit:", err);
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (error && error.code === "PGRST116") {
+      return res.status(404).json({ message: "Përdoruesi nuk u gjet" });
+    }
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error) {
+    console.error("Gabim gjatë marrjes së përdoruesit:", error);
     res.status(500).json({ message: "Gabim gjatë marrjes së përdoruesit" });
   }
 });
 
-
+/* ================= UPDATE ================= */
 router.put("/:email", async (req, res) => {
-  const email = decodeURIComponent(req.params.email); 
+  const email = decodeURIComponent(req.params.email);
   const { name, phone, address, photoUrl } = req.body;
 
   try {
-    const [result] = await pool.query(
-      "UPDATE users SET name = ?, phone = ?, address = ?, photoUrl = ? WHERE email = ?",
-      [name, phone, address, photoUrl, email]
-    );
+    const { error } = await supabase
+      .from("users")
+      .update({ name, phone, address, photoUrl })
+      .eq("email", email);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Përdoruesi nuk u gjet për përditësim" });
-    }
+    if (error) throw error;
 
     res.json({ message: "Profili u përditësua me sukses" });
-  } catch (err) {
-    console.error("Gabim gjatë përditësimit të profilit:", err);
+  } catch (error) {
+    console.error("Gabim gjatë përditësimit të profilit:", error);
     res.status(500).json({ message: "Gabim gjatë përditësimit të profilit" });
   }
 });

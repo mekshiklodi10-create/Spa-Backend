@@ -9,18 +9,18 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Të dhënat janë të detyrueshme" });
     }
 
-    // Krijo user në Supabase (vetëm name tek metadata)
-    const { data, error } = await supabase.auth.admin.createUser({
+    // Krijo user normal (signUp)
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      user_metadata: { name },
+      options: { data: { name } } // metadata
     });
 
     if (error) throw error;
 
     res.status(201).json({
       message: "Regjistrimi u krye me sukses",
-      userId: data.id
+      userId: data.user.id
     });
   } catch (err) {
     console.error("Gabim ne server (register):", err);
@@ -37,7 +37,6 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
     }
 
-    // Sign in me Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -47,14 +46,13 @@ export const login = async (req, res) => {
 
     const user = data.user;
 
-    // Kthe token dhe metadata të user-it
     res.json({
       message: "Login i suksesshëm",
       token: data.session?.access_token,
       user: {
         id: user.id,
         email: user.email,
-        ...user.user_metadata // p.sh. name
+        ...user.user_metadata
       }
     });
   } catch (err) {

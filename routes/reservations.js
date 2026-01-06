@@ -5,7 +5,7 @@ const router = express.Router();
 
 /* ================= CREATE ================= */
 router.post("/", async (req, res) => {
-  const { name, email, date, time, serviceId, packageId } = req.body;
+  const { name, email, date, time, serviceid, packageid } = req.body;
 
   if (!name || !email || !date || !time) {
     return res
@@ -13,7 +13,7 @@ router.post("/", async (req, res) => {
       .json({ message: "Të dhënat e rezervimit janë të detyrueshme" });
   }
 
-  if (!serviceId && !packageId) {
+  if (!serviceid && !packageid) {
     return res
       .status(400)
       .json({ message: "Duhet të zgjidhet një shërbim ose paketë" });
@@ -28,8 +28,8 @@ router.post("/", async (req, res) => {
           email,
           date,
           time,
-          serviceId: serviceId || null,
-          packageId: packageId || null,
+          serviceid: serviceid || null,
+          packageid: packageid || null,
           status: "confirmed",
         },
       ])
@@ -38,7 +38,7 @@ router.post("/", async (req, res) => {
 
     if (error) throw error;
 
-    res.status(201).json({ reservationId: data.id });
+    res.status(201).json({ reservationid: data.id });
   } catch (error) {
     console.error("Error creating reservation:", error);
     res.status(500).json({ message: error.message });

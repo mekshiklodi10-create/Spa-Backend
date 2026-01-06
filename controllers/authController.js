@@ -1,4 +1,5 @@
 import supabase from "../config/db.js";
+import bcrypt from "bcrypt";
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -9,29 +10,34 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Të dhënat janë të detyrueshme" });
     }
 
-    // Krijo user në Supabase Auth
-    const { data, error } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      user_metadata: { name, role: "user" },
-    });
+    // kontrollo nëse ekziston
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ message: "Email ekziston" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { error } = await supabase.from("users").insert([
+      {
+        name,
+        email,
+        password: hashedPassword,
+        role: "user"
+      }
+    ]);
 
     if (error) throw error;
 
-    // Fut user në tabelën lokale
-    const { error: insertError } = await supabase
-      .from("users")
-      .insert([{ supabase_id: data.id, name, email, role: "user" }]);
-
-    if (insertError) throw insertError;
-
-    res.status(201).json({
-      message: "Regjistrimi u krye me sukses",
-      userId: data.id
-    });
+    res.status(201).json({ message: "Regjistrimi u krye me sukses" });
   } catch (err) {
-    console.error("Gabim ne server (register):", err);
-    res.status(500).json({ message: "Gabim ne server", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Gabim në server" });
   }
 };
 
@@ -40,41 +46,33 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
-    }
-
-    // Sign in me Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
-
-    const userSupabaseId = data.user.id;
-
-    // Merr user nga tabela lokale
-    const { data: userData, error: userError } = await supabase
+    const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .eq("supabase_id", userSupabaseId)
+      .eq("email", email)
       .single();
 
-    if (userError) throw userError;
+    if (error || !user) {
+      return res.status(400).json({ message: "Email ose password i gabuar" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.status(400).json({ message: "Email ose password i gabuar" });
+    }
 
     res.json({
       message: "Login i suksesshëm",
-      token: data.session?.access_token,
       user: {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
     });
   } catch (err) {
-    console.error("Gabim ne server (login):", err);
-    res.status(500).json({ message: "Gabim ne server", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Gabim në server" });
   }
 };

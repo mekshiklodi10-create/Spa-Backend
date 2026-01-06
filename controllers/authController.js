@@ -1,5 +1,4 @@
 import supabase from "../config/db.js";
-import { v4 as uuidv4 } from "uuid"; // për id unike tek tabela users
 
 // ================= REGISTER =================
 export const register = async (req, res) => {
@@ -10,31 +9,25 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Të dhënat janë të detyrueshme" });
     }
 
-    // 1️⃣ Krijo user në Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Krijo user në Supabase Auth
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: { data: { name } } // metadata
+      user_metadata: { name, role: "user" },
     });
 
-    if (authError) throw authError;
+    if (error) throw error;
 
-    // 2️⃣ Shto user në tabelën users me rolin default 'user'
-    const { error: dbError } = await supabase
+    // Fut user në tabelën lokale
+    const { error: insertError } = await supabase
       .from("users")
-      .insert([{
-        id: uuidv4(),            // ID e vetme për tabelën users
-        supabase_id: authData.user.id,
-        name,
-        email,
-        role: 'user'             // role default
-      }]);
+      .insert([{ supabase_id: data.id, name, email, role: "user" }]);
 
-    if (dbError) throw dbError;
+    if (insertError) throw insertError;
 
     res.status(201).json({
       message: "Regjistrimi u krye me sukses",
-      userId: authData.user.id
+      userId: data.id
     });
   } catch (err) {
     console.error("Gabim ne server (register):", err);
@@ -51,33 +44,33 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
     }
 
-    // 1️⃣ Sign in tek Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // Sign in me Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (authError) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
+    if (error) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
 
-    const userAuth = authData.user;
+    const userSupabaseId = data.user.id;
 
-    // 2️⃣ Merr të dhënat nga tabela users për rolin
-    const { data: userDb, error: dbError } = await supabase
+    // Merr user nga tabela lokale
+    const { data: userData, error: userError } = await supabase
       .from("users")
-      .select("id, name, email, role")
-      .eq("supabase_id", userAuth.id)
+      .select("*")
+      .eq("supabase_id", userSupabaseId)
       .single();
 
-    if (dbError) throw dbError;
+    if (userError) throw userError;
 
     res.json({
       message: "Login i suksesshëm",
-      token: authData.session?.access_token,
+      token: data.session?.access_token,
       user: {
-        id: userDb.id,
-        email: userDb.email,
-        name: userDb.name,
-        role: userDb.role
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role
       }
     });
   } catch (err) {

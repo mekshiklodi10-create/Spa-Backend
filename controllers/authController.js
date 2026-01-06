@@ -34,6 +34,8 @@ export const register = async (req, res) => {
   }
 };
 
+import supabase from "../config/db.js";
+
 // ================= LOGIN =================
 export const login = async (req, res) => {
   try {
@@ -43,33 +45,37 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
     }
 
-    // 1️⃣ Login me Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Sign in me Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
     if (error) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
 
-    const userId = data.user.id;
+    const user = data.user;
 
-    // 2️⃣ Merr role nga tabela users
+    // Merr role nga tabela users
     const { data: userRow, error: userError } = await supabase
       .from("users")
-      .select("*")
-      .eq("id", userId)
+      .select("role")
+      .eq("supabase_id", user.id)
       .single();
 
-    if (userError) throw userError;
+    if (userError) {
+      return res.status(400).json({ message: "Useri nuk është i regjistruar në sistem" });
+    }
 
     res.json({
       message: "Login i suksesshëm",
       token: data.session?.access_token,
       user: {
-        id: userId,
-        email: data.user.email,
-        name: data.user.user_metadata.name,
-        role: userRow.role // ky është kyç për dashboard
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || null,
+        role: userRow.role
       }
     });
-
   } catch (err) {
     console.error("Gabim ne server (login):", err);
     res.status(500).json({ message: "Gabim ne server", error: err.message });

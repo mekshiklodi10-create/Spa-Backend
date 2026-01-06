@@ -12,15 +12,35 @@ export const register = async (req, res) => {
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
+      email_confirm: true, // User direkt i konfirmuar
       user_metadata: { name, role, phone, address, photoUrl },
     });
 
     if (error) throw error;
 
-    res.status(201).json({ message: "Regjistrimi u krye me sukses", userId: data.id });
+    const userId = data.user.id;
+
+    // Shto user metadata në tabelën 'users'
+    const { error: profileError } = await supabase.from("users").insert([
+      {
+        id: userId,
+        name,
+        role,
+        phone,
+        address,
+        photo_url: photoUrl,
+      },
+    ]);
+
+    if (profileError) throw profileError;
+
+    res.status(201).json({
+      message: "Regjistrimi u krye me sukses",
+      userId: userId,
+    });
   } catch (err) {
     console.error("Gabim ne server (register):", err);
-    res.status(500).json({ message: "Gabim ne server", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -32,15 +52,20 @@ export const login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email dhe fjalëkalimi janë të detyrueshëm" });
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) return res.status(400).json({ message: "Email ose fjalëkalim i gabuar" });
 
-    // Merr user metadata
     const user = data.user;
+
+    // Merr metadata nga tabela 'users'
+    const { data: profileData, error: profileError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) throw profileError;
 
     res.json({
       message: "Login i suksesshëm",
@@ -48,11 +73,12 @@ export const login = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        ...user.user_metadata,
+        ...profileData,
+        photoUrl: profileData.photo_url, // snake → camel
       },
     });
   } catch (err) {
     console.error("Gabim ne server gjate login:", err);
-    res.status(500).json({ message: "Gabim ne server", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };

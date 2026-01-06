@@ -34,7 +34,6 @@ export const register = async (req, res) => {
   }
 };
 
-import supabase from "../config/db.js";
 
 // ================= LOGIN =================
 export const login = async (req, res) => {
